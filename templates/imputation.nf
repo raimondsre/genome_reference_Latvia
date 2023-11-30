@@ -1,16 +1,49 @@
 #!/usr/bin/env nextflow
-// Pipeline to impute VCF with another VCF (reference panel)
-// Outputs imputed VCF and variants counted by AF and INFO score
+// Nextflow pipeline to impute genotype samples with whole genome sequencing derived reference panel
+// Outputs imputed genotypes and variants counted by AF and imputation quality INFO score
+// Pipeline is based on imputation protocol by Priit Palta, FIMM, University of Helsinki https://www.protocols.io/view/genotype-imputation-workflow-v3-0-e6nvw78dlmkj/v1?version_warning=no&step=1
+
+// Software setup
+//  1. Pipeline expets the following software to be in the reference directory (--refDir):
+//   ${params.refDir}/Eagle_v2.4.1/eagle
+//   ${params.refDir}/bref.27Jan18.7e1.jar
+//   ${params.refDir}/beagle.27Jan18.7e1.jar
+//  2. Pipeline expects the following software to be avaliable in environment:
+//   bcftools v1.15
+// File setup
+//  1. Pipeline expect following phasing and imputation maps to be avalable in case of GRCh38 reference genome
+//   ${params.refDir}/imputation/mapChr/eagle_${chr}_b38.map
+//   ${params.refDir}/imputation/Imputation/dockers/reference-data-full/reference-data/map/beagle_${chr}_b38.map
+// For instructions to obtain MAP files please reference the following protocol: https://www.protocols.io/view/genotype-imputation-workflow-v3-0-e6nvw78dlmkj/v1?version_warning=no&step=1
+
+// Example of running the pipeline:
+// nextflow run raimondsre/genome_reference_Latvia/templates/imputation.nf \
+//          -r main -latest \
+//          --toBeImputed ${toImpute} \
+//          --imputationPanel1 ${impPanel} \
+//          --publishDir ${resultsDir} \
+//          --intervalsBed ${intervals} \
+//          --refDir ${refDir} \
+//          --phasedDir ${phaseDir} \
+//          -c ${config}
+//
+//  Input file descriptions:
+//   toImpute: vcf.gz file with >50 genotyped samples to be imputed
+//   impPanel: vcf.gz file with >5o sequenced samples to be used as reference panel
+//   resultsDir: path to directory where outputs will be saved
+//   intervals: tab separated BED file with three columns - chromosome name, start position bp, end position bp
+//   refDir: reference directory where pipeline expect phasing and imputation sofware jar files to be located in reference directory
+//   phaseDir: directory where phased VCF will be saved for both reference panel and genotypes to be imputed; saving phased files improves imputation speed when new genotypes or new reference panels are employed
+//   config: nextflow config file
 
 params.publishDir = './results'
-params.refDir = '/home_beegfs/groups/bmc/genome_analysis_tmp/hs/ref'
-params.phasedDir = '/mnt/beegfs2/home/groups/bmc/references/populationVCF/phased' // Contains phased and bref corrected segments
+params.refDir = './ref'
+params.phasedDir = './phased'
 params.cpus = 8
 
 params.toBeImputed = './'
 params.imputationPanel1 = './'
-//params.VCFfile = './merged.two.vcf.gz'
-//params.intervalsBed = './hg38chr25int5e6.bed'
+params.intervalsBed = './hg38chr25int5e6.bed'
 
 // Define channels for intervals and initial .vcf.gz file
 // Input file to be imputed
